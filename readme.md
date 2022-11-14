@@ -1,13 +1,15 @@
-> :warning:  <b> This connector is not tested on HelloID or with a Somtoday environment! </b>
-
 # HelloID-Conn-Prov-Target-Topicus-Somtoday-HRMService
 
 | :warning: Warning |
-|---------------------------|
+|:---------------------------|
+| Note that this connector is not tested on HelloID or with a Somtoday environment. |
+
+| :warning: Warning |
+|:---------------------------|
 | Note that this connector is "a work in progress" and therefore not ready to use in your production environment. |
 
 | :information_source: Information |
-|---------------------------|
+|:---------------------------|
 | This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements. |
 
 
