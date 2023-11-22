@@ -60,7 +60,9 @@ The following settings are required to connect to the API.
 
 ### Remarks
 - As implementer, you need your own set of credentials before you can implement this connector. Therefore you need to sign a contract with the supplier.
-- A School (also knows as an 'organization' within Somtoday) might have multiple departments (or vestigingen). Accounts are correlated based on the value of the 'Organization.Name' in the contract.
+- As implementer, you can use the HelloID proxy to obtain a token. (This must be requested separately)
+- The connectAPI and HRMservices mmust be activated by the supplier.
+- A School (also knows as an 'organization' within Somtoday) might have multiple departments (or vestigingen). 
 
 
 #### Creation / correlation process
