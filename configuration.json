@@ -1,62 +1,100 @@
 [
     {
-        "key": "UserName",
-        "type": "input",
-        "defaultValue": "",
-        "templateOptions": {
-            "label": "UserName",
-            "description": "The UserName to connect to Topicus Somtoday",
-            "required": true
-        }
+      "key": "SomHrmUserName",
+      "type": "input",
+      "defaultValue": "",
+      "templateOptions": {
+        "label": "HRMService - UserName",
+        "description": "The UserName to connect to Topicus Somtoday HRM-services",
+        "required": true
+      }
     },
     {
-        "key": "Password",
-        "type": "input",
-        "defaultValue": "",
-        "templateOptions": {
-            "type": "password",
-            "label": "Password",
-            "required": true
-        }
+      "key": "SomHrmPassword",
+      "type": "input",
+      "defaultValue": "",
+      "templateOptions": {
+        "label": "HRMService - Password",
+        "required": true
+      }
     },
     {
-        "key": "BaseUrl",
-        "type": "input",
-        "defaultValue": "",
-        "templateOptions": {
-            "label": "BaseUrl",
-            "description": "The URL to the API.",
-            "required": true
-        }
+      "key": "SomHrmBaseUrl",
+      "type": "input",
+      "defaultValue": "",
+      "templateOptions": {
+        "label": "HRMService - BaseUrl",
+        "description": "The URL to the Topicus Somtoday HRM-services",
+        "required": true
+      }
     },
     {
-        "key": "BrinNr",
-        "type": "input",
-        "defaultValue": "",
-        "templateOptions": {
-            "label": "BrinNummer",
-            "description": "The BrinNummer of the college",
-            "required": true
-        }
+      "key": "ConnectClientId",
+      "type": "input",
+      "defaultValue": "",
+      "templateOptions": {
+        "label": "ConnectAPI - Client ID",
+        "description": "The client ID to connect to Topicus Connect API",
+        "required": true
+      }
     },
     {
-        "key": "proxyAddress",
-        "type": "input",
-        "defaultValue": "",
-        "templateOptions": {
-            "label": "Proxy address",
-            "placeholder": "http://localhost:8888",
-            "required": false
-        }
+      "key": "ConnectClientSecret",
+      "type": "input",
+      "defaultValue": "",
+      "templateOptions": {
+        "label": "ConnectAPI - Client Secret",
+        "required": true
+      }
     },
     {
-        "key": "IsDebug",
-        "type": "checkbox",
-        "defaultValue": true,
-        "templateOptions": {
-            "label": "Toggle debug logging",
-            "description": "When toggled, debug logging will be displayed",
-            "required": false
-        }
+      "key": "ConnectBaseUrl",
+      "type": "input",
+      "defaultValue": "",
+      "templateOptions": {
+        "label": "ConnectAPI - BaseUrl",
+        "description": "The URL to the Connect API environment",
+        "required": true
+      }
+    },
+    {
+      "key": "Connectorganization",
+      "type": "input",
+      "defaultValue": "",
+      "templateOptions": {
+        "label": "ConnectAPI - organization",
+        "description": "The name of the organization in Somtoday",
+        "required": true
+      }
+    },
+    {
+      "key": "SomHrmBrinNr",
+      "type": "input",
+      "defaultValue": "",
+      "templateOptions": {
+        "label": "BrinNummer",
+        "description": "The BrinNummer of the college",
+        "required": true
+      }
+    },
+    {
+      "key": "proxyAddress",
+      "type": "input",
+      "defaultValue": "",
+      "templateOptions": {
+        "label": "Proxy address",
+        "placeholder": "http://localhost:8888",
+        "required": false
+      }
+    },
+    {
+      "key": "IsDebug",
+      "type": "checkbox",
+      "defaultValue": true,
+      "templateOptions": {
+        "label": "Toggle debug logging",
+        "description": "When toggled, debug logging will be displayed",
+        "required": false
+      }
     }
-]
+  ]
