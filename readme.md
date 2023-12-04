@@ -31,7 +31,6 @@ The token will be retrieved from the HelloID proxy
 |HelloID proxy |  somtoday/oauth2/token            | gets a token specific for the managed organisation |
 |HRMservice    |  CreatePerson                     | creates or updates a person in HRM |
 |ConnectAPI    |  /instelling                      | get the organisation |
-|ConnectAPI    |  /instelling                      | get the organisation |
 |ConnectAPI    |  /vestiging                       | gets all the related schools of the organisation |
 |ConnectAPI    |  /vestiging/(schoolID)/medewerker | gets data of the active employee |
 
