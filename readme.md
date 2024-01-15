@@ -1,13 +1,4 @@
 # HelloID-Conn-Prov-Target-Topicus-Somtoday-HRMService
-
-| :warning: Warning |
-|:---------------------------|
-| Note that this connector is not tested on HelloID or with a Somtoday environment. |
-
-| :warning: Warning |
-|:---------------------------|
-| Note that this connector is "a work in progress" and therefore not ready to use in your production environment. |
-
 | :information_source: Information |
 |:---------------------------|
 | This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements. |
@@ -31,10 +22,17 @@
 ## Introduction
 
 _HelloID-Conn-Prov-Target-Topicus-Somtoday-HRMService_ is a _target_ connector. Topicus-Somtoday-HRMService provides a SAOP API's that allow you to programmatically interact with its data. The HelloID connector uses the API endpoints listed in the table below.
+This connector will also use the connectAPI to read the employeedata from Somtoday. 
+The token will be retrieved from the HelloID proxy
 
-| Endpoint     | Description |
-| ------------ | ----------- |
-|  CreatePerson           | creates or updates a person in HRM |
+
+| service      | Endpoint                          | Description |
+| ------------ | ------------                      | ----------- |
+|HelloID proxy |  somtoday/oauth2/token            | gets a token specific for the managed organisation |
+|HRMservice    |  CreatePerson                     | creates or updates a person in HRM |
+|ConnectAPI    |  /instelling                      | get the organisation |
+|ConnectAPI    |  /vestiging                       | gets all the related schools of the organisation |
+|ConnectAPI    |  /vestiging/(schoolID)/medewerker | gets data of the active employee |
 
 This connector will create and update persons, including the list of "vestigingen" of the person.
 
@@ -46,37 +44,40 @@ The following settings are required to connect to the API.
 
 | Setting      | Description                                     | Mandatory   |
 | ------------ | -----------                                     | ----------- |
-| UserName     | The UserName to connect to the API              | Yes         |
-| Password     | -                                               | Yes         |
-| BaseUrl      | The URL to the API. Like: https://portalnaam-oop.Somtoday.nl/services/HRMService?wsdl'               | Yes         |
+| SomHrmUserName     | The UserName to connect to the HRMservice              | Yes         |
+| SomHrmPassword     | The Password to connect to the HRMservice                                               | Yes         |
+| SomHrmBaseUrl      | The URL to the HRMservice Like: https://portalnaam-oop.Somtoday.nl/services/HRMService?wsdl'               | Yes         |
+| ConnectClientId      | The client ID to connect to Topicus Connect API               | Yes         |
+| ConnectClientSecret | ConnectAPI - Client Secret | Yes |
+| ConnectBaseUrl |The URL to the Connect API environment | Yes |
+| Connectorganization | The name of the organization in Somtoday | Yes         |
 | BrinNummer   | The BrinNummer of the school                     | Yes         |
 | Proxyaddress | Optional web proxy, e.g. "http://localhost:8888  | No          |
 | IsDebug      | When toggled, debug logging will be displayed    | No          |
+
 ### Prerequisites
 
 ### Remarks
+- As implementer, you need your own set of credentials before you can implement this connector. Therefore you need to sign a contract with the supplier.
+- As implementer, you can use the HelloID proxy to obtain a token. (This must be requested separately)
+- The connectAPI and HRMservices mmust be activated by the supplier.
+- A School (also knows as an 'organization' within Somtoday) might have multiple departments (or vestigingen). 
+
 
 #### Creation / correlation process
 
-The api does not return any data from HRM, therefore it is not possible to differentiate between new and existing users. Existing users will be updated.
+Through the connect API you can get the data of only active employees to correlate and reuse the data from the retrieved employee.
+It's is not possible to get an inactive employee.
+
 
 #### Update
-In principle it is advised when updating users to specify all attributes of the user, not only the attributes that have been changed.
-If a specific attribute is not known, it is usually best to set the attribute to $null in the account object, that way the attribute is omitted from the xml send.
+In principle it is necessary, when updating users, to specify all attributes of the user, not only the attributes that have been changed.
 
 Account attributes that are set to $null or are empty will not be added to the xml sent to Somtoday. If a attribute should be cleared explicitly, that is not implemented by this current template.
 
 See the "HRM webservice.pdf" for information regarding specific attributes
 
-#### enable/disable/grant/revoke
-There are no specific endpoints for these actions available, nor is it possible to compare current settings. Use the "Update" action to calculate and implement permissions
 
-#### delete
-Not supported.
-
-## Setup the connector
-
-There are no specific requirements
 
 ## Getting help
 
