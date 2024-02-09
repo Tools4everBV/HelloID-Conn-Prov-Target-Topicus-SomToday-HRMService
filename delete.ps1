@@ -572,10 +572,10 @@ try {
             $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
             $errorObj = Resolve-HTTPError -ErrorObject $ex
 
-            $errorMessage = "Could not find Topicus-Somtoday-Employee account for: [$($p.DisplayName)]. Error: $($ex.Exception.Message) $($errorObj.ErrorMessage) "
+            $errorMessage = "Connect-API Failed: [$($p.DisplayName)]. Error: $($ex.Exception.Message) $($errorObj.ErrorMessage) "
         }
         else {
-            $errorMessage = "Could not find Topicus-Somtoday-Employee account for: [$($p.DisplayName)]. Error: $($ex.Exception.Message)"
+            $errorMessage = "Connect-API Failed: [$($p.DisplayName)]. Error: $($ex.Exception.Message)"
         }
 
         if ($errorMessage) {
