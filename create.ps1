@@ -10,6 +10,8 @@ $success = $false
 $auditLogs = [System.Collections.Generic.List[PSCustomObject]]::new()
 $now = (Get-Date).ToUniversalTime()
 
+
+
 # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
@@ -91,6 +93,10 @@ function Get-SHA1String {
     write-output $([system.convert]::ToBase64String($hashedDataBytes))
 
 }
+
+
+
+
 function Get-SoapBody {
     [CmdletBinding()]
     param (
@@ -167,10 +173,23 @@ function Get-SoapBody {
     Write-Output $soapbody
 }
 function Get-SoapHeader {
+
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string] $brincode
+    )
     [DateTime] $created = [DateTime]::Now.ToUniversalTime()
     [string] $createdStr = $created.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
     [string] $phrase = [Guid]::NewGuid().ToString();
     [string] $nonce = Get-SHA1String($phrase);
+
+    if ($brincode.Length -ne 6) {
+        Throw "brin is invalid length (6)"
+    }
+
+    $brincode4 = $brincode.Substring(0, 4)
+
     $Header = @"
     <Security xmlns="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
         <UsernameToken wsu:Id="UsernameToken - 1AEA5E598817F48387146183029981292" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
@@ -181,11 +200,11 @@ function Get-SoapHeader {
             $createdStr</Created>
 			</UsernameToken>
 		</Security>
-		<Brinnummer xmlns="http://hrm.koppelingen.iridium.topicus.nl/">01UC</Brinnummer>
+		<Brinnummer xmlns="http://hrm.koppelingen.iridium.topicus.nl/">$brincode4</Brinnummer>
 "@
     Write-Output $Header
-
 }
+
 function Resolve-Topicus-Somtoday-HRMServiceError {
     [CmdletBinding()]
     param (
@@ -364,8 +383,8 @@ try {
     # Account mapping
     $HRMAdres = @{
         straat               = ""
-        huisnummer           = "93C"       #House number, Mandatory for domestic addresses, value must be present in SOMtoday-postcode list
-        postcode             = "3311JG"       #Postcode number, Mandatory for domestic addresses, value must be present in SOMtoday-postcode list
+        huisnummer           = "1A"       #House number, Mandatory for domestic addresses, value must be present in SOMtoday-postcode list
+        postcode             = "1234AB"       #Postcode number, Mandatory for domestic addresses, value must be present in SOMtoday-postcode list
         plaatsnaam           = ""
         buitenland1          = ""       #Foreign address, Mandatory for foreign addresses
         buitenland2          = ""
@@ -378,28 +397,6 @@ try {
 
     $vestigingen = [System.Collections.Generic.List[PSCustomObject]]::new()
 
-    # foreach ($Contract in $p.contracts) {
-    #     #all in scope dryRUN
-    #     if ($dryRun -eq $true) {
-    #         $Contract.Context.InConditions = $true 
-    #     }
-    #     if ($contract.Context.InConditions -eq $true) {
-    #         if (-NOT ([string]::IsNullOrEmpty($contract.custom.schoolBrinCode))) {
-    #             #afkorting/brinnummer gelijk aan brin 6
-    #             $curVestiging = @{
-    #                 afkorting  = $contract.custom.schoolBrinCode
-    #                 brinNummer = $contract.custom.schoolBrinCode
-    #             }
-    #             $vestigingen.add($curVestiging)
-    #         }
-    #     }
-    # }    
-    # $vestigingen = $vestigingen | sort-object -unique
-
-    # #RNTEST:
-    # $vestigingen = '{ "afkorting": "IIex College", "brinNummer": "01UC15" }'
-    # $vestigingen = '[ { "afkorting": "01UC09", "brinNummer": "01UC09" }, { "afkorting": "01UC15", "brinNummer": "01UC15" } ]'
-    # $vestigingen = $vestigingen | convertfrom-json
 
     $curVestiging = @{
         afkorting  = $p.primarycontract.custom.schoolBrinCode
@@ -434,9 +431,9 @@ try {
         #NIET ondersteunendPersoneel    = ""                          # Suppporting staff,  valid values are "1"= Yes or "0" = no
         externMedewerkerNummer = $p.externalID       # used as identification on update
         vestigingen            = $Vestigingen
-        gebruikersnaam         = $p.accounts.ADOnderwijsAccounts.userprincipalname.split("@")[0]            # Username, must be unique in entire organization
+        gebruikersnaam         = $p.accounts.MicrosoftActiveDirectory.userprincipalname.split("@")[0]            # Username, must be unique in entire organization
         wachtwoord             = New-RandomPassword                      # password
-        email                  = $p.accounts.ADOnderwijsAccounts.mail          # email address
+        email                  = $p.accounts.MicrosoftActiveDirectory.mail          # email address
         #actief                    = "N"                         # Active  valid values are "1"= Yes or "0" = no
         functie                = $p.PrimaryContract.custom.somtodayTitleDescription -replace ("&", "&amp;")                       # Value must be present in SOMtoday-function list (Beheer > Instelling > Functies)
         datumInDienst          = format-date -date $p.PrimaryContract.StartDate  -InputFormat 'yyyy-MM-ddThh:mm:ssZ' -OutputFormat "yyyy-MM-dd"                          # Date in service. Format: yyyy-MM-dd
@@ -461,6 +458,10 @@ try {
         $responseOrganizations = Invoke-RestMethod @splatRestParams -verbose:$false
         $organization = $responseOrganizations.instellingen.Where({ $_.naam -eq "$($config.Connectorganization)" })
 
+        if ([string]::isNullOrEmpty($organization.uuid)) {
+            Throw "Failed to retrieve organization: uuid is missing or not found"
+        }
+
         Write-Verbose "found uuid $($organization.uuid) for organisation $($config.Connectorganization)"
 
         $splatRestParams = @{
@@ -471,6 +472,10 @@ try {
         }
 
         $responseToken = Invoke-RestMethod @splatRestParams -verbose:$false
+
+        if ([string]::isNullOrEmpty($responseToken)) {
+            Throw "Failed to retrieve token - tonen response is missing"
+        }
 
         Write-Verbose 'Adding authorizationToken to headers'
         $headers = [System.Collections.Generic.Dictionary[[String], [String]]]::new()
@@ -548,10 +553,10 @@ try {
             $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
             $errorObj = Resolve-HTTPError -ErrorObject $ex
 
-            $errorMessage = "Could not find Topicus-Somtoday-Employee account for: [$($p.DisplayName)]. Error: $($ex.Exception.Message) $($errorObj.ErrorMessage) "
+            $errorMessage = "Connect-API Failed: [$($p.DisplayName)]. Error: $($ex.Exception.Message) $($errorObj.ErrorMessage) "
         }
         else {
-            $errorMessage = "Could not find Topicus-Somtoday-Employee account for: [$($p.DisplayName)]. Error: $($ex.Exception.Message)"
+            $errorMessage = "Connect-API Failed: [$($p.DisplayName)]. Error: $($ex.Exception.Message)"
         }
 
         if ($errorMessage) {
@@ -571,7 +576,7 @@ try {
         $splatRestMethodParams['Proxy'] = $config.ProxyAddress
     }
 
-    $SoapHeader = Get-SoapHeader
+    $SoapHeader = Get-SoapHeader -Brincode $config.SomhrmBrinNr
     $SoapBody = Get-SoapBody -account $account
 
     $createPersonXmlBody = @"
