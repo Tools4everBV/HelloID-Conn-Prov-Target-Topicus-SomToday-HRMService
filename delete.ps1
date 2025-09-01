@@ -1,87 +1,104 @@
-#####################################################
-# HelloID-Conn-Prov-Target-Topicus-Somtoday-HRMService-Create
-#
-# Version: 1.0.0
-#####################################################
-# Initialize default values
-$config = $configuration | ConvertFrom-Json
-$p = $person | ConvertFrom-Json
-$aref = $accountreference | ConvertFrom-json
-$success = $false
-$auditLogs = [System.Collections.Generic.List[PSCustomObject]]::new()
-$now = (Get-Date).ToUniversalTime()
+##################################################
+# HelloID-Conn-Prov-Target-Topicus-Somtoday-HRMService-Delete
+# PowerShell V2
+##################################################
 
-
-# Set TLS to accept TLS, TLS 1.1 and TLS 1.2
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
-
-# Set debug logging
-switch ($($config.IsDebug)) {
-    $true { $VerbosePreference = 'Continue' }
-    $false { $VerbosePreference = 'SilentlyContinue' }
-}
+# Enable TLS1.2
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 #region functions
-function Get-RandomCharacters([int]$length, $characters) {
-    $random = 1..$length | ForEach-Object { Get-Random -Maximum $characters.length } 
-    $ofs = "" 
-    return [String]$characters[$random]
+function Get-ConnectAPIEmployee {
+    [cmdletbinding()]
+    Param (
+        [string]$BaseUri,
+        [object]$Headers,
+        [object]$VestigingUUID,
+        [string]$CorrelationField,
+        [string]$CorrelationValue
+    )
+    try {
+        # Pagination
+        $amount = 50
+        $offset = 0
+        $employeeFound = $null
+
+        do {
+            $splatRestParams = @{
+                Method          = 'GET'
+                Uri             = "$BaseUri/rest/v1/connect/vestiging/$VestigingUUID/medewerker?amount=$amount&offset=$offset&peilschooljaar=HUIDIG"
+                headers         = $Headers
+                UseBasicParsing = $true
+            }
+            $responseEmployee = Invoke-RestMethod @splatRestParams -Verbose:$false -ErrorAction silentlycontinue
+
+            $offset = $offset + $amount
+            $employeeFound = $responseEmployee.medewerkers | Where-Object  $CorrelationField -eq $CorrelationValue
+
+        } until (
+            (($responseEmployee.medewerkers | Measure-Object).count -lt $amount) -OR ($null -ne $employeeFound)
+        )
+
+        if ($null -eq $employeeFound) {
+            Write-Information "No employee found with [$CorrelationField] = [$CorrelationValue] in vestiging [$VestigingUUID]"
+            return $null
+        }
+
+        if ($employeeFound.Count -gt 1) {
+            throw "Multiple employees found with [$CorrelationField] = [$CorrelationValue] in vestiging [$VestigingUUID]"
+        }
+
+        Write-Information "Found employee with [$CorrelationField] = [$CorrelationValue] in Vestiging $VestigingUUID]"
+        Write-Output $employeeFound
+    }
+    catch {
+        $PSCmdlet.ThrowTerminatingError($_)
+    }
 }
-#region Support Functions
-function New-RandomPassword() {
-    #passwordSpecifications:
-    $length = 8
-    $upper = 2
-    $number = 2
-    $special = 2
-    $lower = $length - $upper - $number - $special
-      
-    $chars = "abcdefghkmnprstuvwxyz"
-    $NumberPool = "23456789"
-    $specialPool = "!#%^*()"
 
-    $CharPoolLower = $chars.ToLower()
-    $CharPoolUpper = $chars.ToUpper()
-
-    $password = Get-RandomCharacters -characters $CharPoolUpper -length $upper
-    $password += Get-RandomCharacters -characters $NumberPool -length $number
-    $password += Get-RandomCharacters -characters $specialPool -length $special
-    $password += Get-RandomCharacters -characters $CharPoolLower -length $Lower
-
-    $passwordArray = $password.ToCharArray()   
-    $passwordScrambledArray = $passwordArray | Get-Random -Count $passwordArray.Length     
-    $password = -join $passwordScrambledArray
-
-    return $password
-}
-
-function Resolve-HTTPError {
+function Resolve-Topicus-Somtoday-HRMServiceError {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory,
-            ValueFromPipeline
-        )]
-        [object]$ErrorObject
+        [Parameter(Mandatory)]
+        [object]
+        $ErrorObject
     )
     process {
         $httpErrorObj = [PSCustomObject]@{
-            FullyQualifiedErrorId = $ErrorObject.FullyQualifiedErrorId
-            MyCommand             = $ErrorObject.InvocationInfo.MyCommand
-            RequestUri            = $ErrorObject.TargetObject.RequestUri
-            ScriptStackTrace      = $ErrorObject.ScriptStackTrace
-            ErrorMessage          = ''
+            ScriptLineNumber = $ErrorObject.InvocationInfo.ScriptLineNumber
+            Line             = $ErrorObject.InvocationInfo.Line
+            ErrorDetails     = $ErrorObject.Exception.Message
+            FriendlyMessage  = $ErrorObject.Exception.Message
         }
-        if ($ErrorObject.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') {
-            $httpErrorObj.ErrorMessage = $ErrorObject.ErrorDetails.Message
+        if (-not [string]::IsNullOrEmpty($ErrorObject.ErrorDetails.Message)) {
+            $httpErrorObj.ErrorDetails = $ErrorObject.ErrorDetails.Message
         }
         elseif ($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException') {
-            $httpErrorObj.ErrorMessage = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
+            if ($null -ne $ErrorObject.Exception.Response) {
+                $streamReaderResponse = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
+                if (-not [string]::IsNullOrEmpty($streamReaderResponse)) {
+                    $httpErrorObj.ErrorDetails = $streamReaderResponse
+                }
+            }
+        }
+        try {
+            $errorDetailsObject = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
+            if ($errorDetailsObject.errors) {
+                $httpErrorObj.FriendlyMessage = $errorDetailsObject.errors -join ', '
+            } elseif ($errorDetailsObject.message) {
+                $httpErrorObj.FriendlyMessage = $errorDetailsObject.message
+            } elseif ($errorDetailsObject.error_description) {
+                $httpErrorObj.FriendlyMessage = $errorDetailsObject.error_description
+            } else {
+                $httpErrorObj.FriendlyMessage = $errorDetailsObject
+            }        }
+        catch {
+            $httpErrorObj.FriendlyMessage = "Error: [$($httpErrorObj.ErrorDetails)] [$($_.Exception.Message)]"
         }
         Write-Output $httpErrorObj
     }
 }
 
-function Get-SHA1String {
+function New-SHA1String {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
@@ -93,7 +110,8 @@ function Get-SHA1String {
     write-output $([system.convert]::ToBase64String($hashedDataBytes))
 
 }
-function Get-SoapBody {
+
+function New-SoapBody {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
@@ -168,7 +186,8 @@ function Get-SoapBody {
 
     Write-Output $soapbody
 }
-function Get-SoapHeader {
+
+function New-SoapHeader {
 
     [CmdletBinding()]
     param (
@@ -178,19 +197,17 @@ function Get-SoapHeader {
     [DateTime] $created = [DateTime]::Now.ToUniversalTime()
     [string] $createdStr = $created.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
     [string] $phrase = [Guid]::NewGuid().ToString();
-    [string] $nonce = Get-SHA1String($phrase);
+    [string] $nonce = New-SHA1String($phrase);
 
-    if ($brincode.Length -ne 6) {
-        Throw "brin is invalid length (6)"
-    }
+  
 
     $brincode4 = $brincode.Substring(0, 4)
 
     $Header = @"
     <Security xmlns="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
         <UsernameToken wsu:Id="UsernameToken - 1AEA5E598817F48387146183029981292" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
-            	<Username>$($config.SomHrmUserName)</Username>
-            <Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">$($config.SomHrmPassword)</Password>
+            	<Username>$($actionContext.Configuration.SomHrmUserName)</Username>
+            <Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">$($actionContext.Configuration.SomHrmPassword)</Password>
             <Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">$nonce</Nonce>
 			<Created>
             $createdStr</Created>
@@ -201,406 +218,184 @@ function Get-SoapHeader {
     Write-Output $Header
 }
 
-function Resolve-Topicus-Somtoday-HRMServiceError {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory)]
-        [object]
-        $ErrorObject
-    )
-    process {
-        $httpErrorObj = [PSCustomObject]@{
-            ScriptLineNumber = $ErrorObject.InvocationInfo.ScriptLineNumber
-            Line             = $ErrorObject.InvocationInfo.Line
-            ErrorDetails     = ''
-            FriendlyMessage  = ''
-        }
-        if ($ErrorObject.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') {
-            $httpErrorObj.ErrorDetails = $ErrorObject.ErrorDetails.Message
-        }
-        elseif ($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException') {
-            if ($null -eq $ErrorObject.Exception.Response) {
-                $httpErrorObj.ErrorDetails = $ErrorObject.Exception.Message
-                $httpErrorObj.FriendlyMessage = $ErrorObject.Exception.Message
-            }
-            $streamReaderResponse = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
-            $httpErrorObj.ErrorDetails = $streamReaderResponse
-            $httpErrorObj.FriendlyMessage = $streamReaderResponse   #Todo:  modify response to make the message friendly for the user.
-        }
-        Write-Output $httpErrorObj
-    }
-}
-
-function Generate-MiddleName {
-    [cmdletbinding()]
-    Param (
-        [object]$person
-    )
-    try {
-        $FamilyNamePrefix = $person.Name.FamilyNamePrefix 
-        $PartnerNamePrefix = $person.Name.FamilyNamePartnerPrefix
-        $convention = $person.Name.Convention
-
-        $middlename = ""
-        switch ($convention) {
-            "B" {
-                $middlename = $FamilyNamePrefix;
-            }
-            "P" {
-                $middlename = $PartnerNamePrefix;                 
-            }
-            "BP" {
-                $middlename = $FamilyNamePrefix;
-            }
-            "PB" {
-                $middlename = $PartnerNamePrefix;   
-            }
-            Default {
-                $middlename = $FamilyNamePrefix;
-            }
-        }
-
-        return $middlename
-    }
-    catch {
-        throw("An error was found in the name convention algorithm: $($_.Exception.Message): $($_.ScriptStackTrace)")
-    
-    }
-}
-
-function Generate-LastName {
-    [cmdletbinding()]
-    Param (
-        [object]$person
-    )
-
-    try {
-        $suffix = "";
-        $givenname = if ([string]::IsNullOrEmpty($person.Name.Nickname)) { $person.Name.Initials.Substring(0, 1) }else { $person.Name.Nickname }
-        $FamilyNamePrefix = $person.Name.FamilyNamePrefix
-        $FamilyName = $person.Name.FamilyName           
-        $PartnerNamePrefix = $person.Name.FamilyNamePartnerPrefix
-        $PartnerName = $person.Name.FamilyNamePartner 
-        $convention = $person.Name.Convention
-
-        $LastName = ""
-
-        switch ($convention) {
-            "B" {
-                #  $LastName += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { $FamilyNamePrefix + " " }
-                $LastName += $FamilyName  
-            }
-            "P" {
-                #   $LastName += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { $FamilyNamePrefix + " " }
-                $LastName += $PartnerName                    
-            }
-            "BP" {
-                #   $LastName += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { $FamilyNamePrefix + " " }
-                $LastName += $FamilyName + " - "
-                $LastName += if (-NOT([string]::IsNullOrEmpty($PartnerNamePrefix))) { $PartnerNamePrefix + " " }
-                $LastName += $PartnerName
-            }
-            "PB" {
-                #   $LastName += if (-NOT([string]::IsNullOrEmpty($PartnerNamePrefix))) { $PartnerNamePrefix + " " }
-                $LastName += $PartnerName + " - "
-                $LastName += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { $FamilyNamePrefix + " " }
-                $LastName += $FamilyName
-            }
-            Default {
-                #   $LastName += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { $FamilyNamePrefix + " " }
-                $LastName += $FamilyName
-
-            }
-        }
-        return $LastName
-            
-    }
-    catch {
-        throw("An error was found in the name convention algorithm: $($_.Exception.Message): $($_.ScriptStackTrace)")
-    } 
-}
-
-function Generate-Gender {
-    [cmdletbinding()]
-    Param (
-        [object]$person
-    )
-
-    try {
-        $gender = $person.Details.Gender
-
-        switch ($gender) {
-            "M" {
-                $gender = "MAN"
-                break;
-            }
-            "V" {
-                $gender = "VROUW"                
-            }
-            Default {
-                $gender = "ONBEKEND"
-            }
-        }
-        return $gender
-    }
-    catch {
-        throw("An error was found in the name convention algorithm: $($_.Exception.Message): $($_.ScriptStackTrace)")
-    } 
-}
-
-function format-date {
-    [CmdletBinding()]
-    Param
-    (
-        [string]$date,
-        [string]$InputFormat,
-        [string]$OutputFormat
-    )
-    try {
-        if (-NOT([string]::IsNullOrEmpty($date))) {    
-            $dateString = get-date([datetime]::ParseExact($date, $InputFormat, $null)) -Format($OutputFormat)
-        }
-        else {
-            $dateString = $null
-        }
-
-        return $dateString
-    }
-    catch {
-        throw("An error was thrown while formatting date: $($_.Exception.Message): $($_.ScriptStackTrace)")
-    }
-    
-}
-
 #endregion
 
-# Begin
-try {    
-    # Account mapping
-    $HRMAdres = @{
-        straat               = ""
-        huisnummer           = "93C"       #House number, Mandatory for domestic addresses, value must be present in SOMtoday-postcode list
-        postcode             = "3311JG"       #Postcode number, Mandatory for domestic addresses, value must be present in SOMtoday-postcode list
-        plaatsnaam           = ""
-        buitenland1          = ""       #Foreign address, Mandatory for foreign addresses
-        buitenland2          = ""
-        buitenland3          = ""
-        telefoonnummer       = ""       #Home phone number
-        geheimAdres          = ""       #Secret addres,  valid values are "J"= Yes or "N" = no
-        geheimTelefoonnummer = ""       #Secret phone number,  valid values are "J"= Yes or "N" = no
-        landcode             = "6030"       #Country Code, Must be a value from the SOMtoday-county list
+try {
+    # Verify if [aRef] has a value
+    if ([string]::IsNullOrEmpty($($actionContext.References.Account))) {
+        throw 'The account reference could not be found'
     }
 
-    $vestigingen = [System.Collections.Generic.List[PSCustomObject]]::new()
+    Write-Information 'Verifying if a Topicus-Somtoday-HRMService account exists'
+     Write-information "Retrieving Somtoday organizationUUID's"
 
-    # foreach ($Contract in $p.contracts) {
-    #     #all in scope dryRUN
-    #     if ($dryRun -eq $true) {
-    #         $Contract.Context.InConditions = $true 
-    #     }
-    #     if ($contract.Context.InConditions -eq $true) {
-    #         if (-NOT ([string]::IsNullOrEmpty($contract.custom.schoolBrinCode))) {
-    #             #afkorting/brinnummer gelijk aan brin 6
-    #             $curVestiging = @{
-    #                 afkorting  = $contract.custom.schoolBrinCode
-    #                 brinNummer = $contract.custom.schoolBrinCode
-    #             }
-    #             $vestigingen.add($curVestiging)
-    #         }
-    #     }
-    # }    
-    # $vestigingen = $vestigingen | sort-object -unique
+    $splatRestParams = @{
+        Method = 'GET'
+        Uri    = "https://api.$($actionContext.Configuration.ConnectBaseUrl)/rest/v1/connect/instelling"
+    }
+    $responseOrganizations = Invoke-RestMethod @splatRestParams -verbose:$false
+    $organization = $responseOrganizations.instellingen.Where({ $_.naam -eq "$($actionContext.Configuration.ConnectOrganization)" })
 
-
-    $account = [PSCustomObject]@{
-        #medewerkerNummer          = $p.externalID                       # Auto-generated by hrm
-        afkorting              = $aref.afkorting #$p.accounts.ADOnderwijsAccounts.userprincipalname.split("@")[0]                      # Short name (MANDATORY)
-        achternaam             = Generate-LastName -person $p       # Last name
-        meisjesnaam            = ""                          # Maiden name
-        voorletters            = $p.name.initials                          # Initials (with dots?)
-        voorvoegsel            = Generate-MiddleName -person $p     # Prefix, must be a value from the SOMtoday-prefix list
-        roepnaam               = $p.name.Nickname          # Nickname
-        #NIET voornamen                 = ""                          # First name(s)
-        geslacht               = Generate-Gender -person $p                 # Gender. Valid values are: "MAN", "VROUW" and "ONBEKEND"
-        #NIET geboortedatum             = ""                          # Birth date  Format yyyy-MM-dd
-        #NIET geboorteplaats            = ""                          # Place of Birth
-        #NIET geboortelandcode          = ""                          # Country of Birth, Must be a value from the SOMtoday country list
-        #NIET nationaliteitcode         = ""                          # Nationality code, Must be a value from the SOMtoday country list
-        #NIET burgerlijkestaat          = ""                          # Marital status Valid values are: "Gehuwd", "Geregistreerd partnerschap", "Gescheiden", "Ongehuwd" and "Ontbonden geregistreerd partnerschap".
-        #NIET bsn = $null
-        #NIET ibanNummer                = ""
-        #NIET bicNummer                 = ""
-        #NIET casoNummer                = ""
-        HRMAdres               = $HRMAdres
-        #NIET mobielNummer              = ""                          # Mobile phone number
-        internNummer           = "HelloID"                            # Internal phone number
-        #NIET onderwijsPersoneel        = ""                          # Teaching staff valid values are "1"= Yes or "0" = no
-        #NIET ondersteunendPersoneel    = ""                          # Suppporting staff,  valid values are "1"= Yes or "0" = no
-        externMedewerkerNummer = $p.externalID       # used as identification on update
-        vestigingen            = $Vestigingen
-        gebruikersnaam         = $null           # Username, must be unique in entire organization
-        wachtwoord             = New-RandomPassword                      # password
-        email                  = $p.accounts.ADOnderwijsAccounts.mail          # email address
-        #actief                    = "N"                         # Active  valid values are "1"= Yes or "0" = no
-        functie                = $p.PrimaryContract.custom.somtodayTitleDescription                        # Value must be present in SOMtoday-function list (Beheer > Instelling > Functies)
-        datumInDienst          = format-date -date $p.PrimaryContract.StartDate  -InputFormat 'yyyy-MM-ddThh:mm:ssZ' -OutputFormat "yyyy-MM-dd"                          # Date in service. Format: yyyy-MM-dd
-        datumUitDienst         = $null
-        redenUitDienst         = $null                       # Contract end date reason. Value must be present in SOMtoday list (Beheer > Instelling > Redenen uit dienst)
-        #   uitsluitenCorrespondentie = ""                          # Disable correspondence  valid values are "1"= Yes or "0" = no
+    if ([string]::isNullOrEmpty($organization.uuid)) {
+        throw "An organization (instelling) with name: [$($actionContext.Configuration.Instelling)] could not be found"
     }
 
-    if (-NOT[string]::IsNullOrEmpty($p.PrimaryContract.EndDate)) {
-        if ($(get-date $p.PrimaryContract.EndDate) -le $(get-date)) {
-            $account.datumUitDienst = format-date -date $p.PrimaryContract.EndDate  -InputFormat 'yyyy-MM-ddThh:mm:ssZ' -OutputFormat "yyyy-MM-dd"                          # Contract end date Format: yyyy-MM-dd
-            $account.redenUitDienst = "Uit dienst"
-        }
+    Write-information "Found uuid $($organization.uuid) for organisation $($actionContext.Configuration.ConnectOrganization)"
+
+    Write-Information 'Determine oAuth URI'
+    $oAuthUri = "https://inloggen.$($actionContext.Configuration.ConnectBaseUrl)/oauth2/token?organisation=$($organization.uuid)"
+    if ($actionContext.Configuration.UseConnectorProxy -eq $true) {
+        $oAuthUri = "https://connectors.helloid.cloud/service/proxy/api/Connector/somtoday/oauth2/token?organisation=$($organization.uuid)"
     }
 
-    try {
-        Write-Verbose "Retrieving Somtoday organizationUUID's"
-        $splatRestParams = @{
-            Method = 'GET'
-            Uri    = "$($config.ConnectBaseUrl)/rest/v1/connect/instelling"
-        }
-        $responseOrganizations = Invoke-RestMethod @splatRestParams -verbose:$false
-        $organization = $responseOrganizations.instellingen.Where({ $_.naam -eq "$($config.Connectorganization)" })
-
-        if ([string]::isNullOrEmpty($organization.uuid)) {
-            Throw "Failed to retrieve organization: uuid is missing or not found"
-        }
-
-        Write-Verbose "found uuid $($organization.uuid) for organisation $($config.Connectorganization)"
-
-        $splatRestParams = @{
-            Method          = 'POST'
-            Uri             = "https://connectors.helloid.cloud/service/proxy/api/connector/somtoday/oauth2/token?organisation=$($organization.uuid)"
-            body            = "client_id=$($config.ConnectClientId)&client_secret=$($config.ConnectClientSecret)&grant_type=client_credentials"
-            UseBasicParsing = $true
-        }
-
-        $responseToken = Invoke-RestMethod @splatRestParams -verbose:$false
-
-        if ([string]::isNullOrEmpty($responseToken)) {
-            Throw "Failed to retrieve token - tonen response is missing"
-        }
-
-        Write-Verbose 'Adding authorizationToken to headers'
-        $headers = [System.Collections.Generic.Dictionary[[String], [String]]]::new()
-        $headers.Add("Authorization", "Bearer $($responseToken.access_token)")
-
-        $splatRestParams = @{
-            Method          = 'GET'
-            Uri             = "$($config.ConnectBaseUrl)/rest/v1/connect/vestiging"
-            headers         = $headers
-            UseBasicParsing = $true
-        }
-        $responseVestigingen = Invoke-RestMethod @splatRestParams -verbose:$false
-
-        $currentSchoolName = $p.Primarycontract.custom.schoolNaam    
-        $currentSchoolCode = $p.primarycontract.custom.schoolBrinCode
-        write-verbose -verbose "$currentSchoolCode"
-
-        if ([string]::IsNullOrEmpty($currentSchoolCode)) {       
-            $currentSchoolCode = "01UC00"
-        }
-
-
-        $curVestiging = @{
-            afkorting  = $currentSchoolCode
-            brinNummer = $currentSchoolCode
-        }
-        $vestigingen.add($curVestiging)
-
-        $account.vestigingen = $vestigingen
-
-
-        $currentSchoolUUID = ($responseVestigingen.vestigingen.Where({ $_.afkorting -eq $currentSchoolCode })).uuid
-   
-        write-verbose "found uuid: $($currentSchoolUUID) for school $currentSchoolCode"
-
-        #search for employee on externnummer stop when found
-        $amount = 50
-        $offset = 0
-        $employeeFound = $null
-
-        $correlationField = "externnummer"
-        $correlationValue = $p.externalID
-
-        #  $correlationField = "gebruikersnaam"
-        # $correlationValue = "NBR"
-
-        do {
-            $splatRestParams = @{
-                Method          = 'GET'
-                Uri             = "$($config.ConnectBaseUrl)/rest/v1/connect/vestiging/$currentSchoolUUID/medewerker?amount=$amount&offset=$offset"
-                headers         = $headers
-                UseBasicParsing = $true
-            }
-
-            $responseEmployee = Invoke-RestMethod @splatRestParams -verbose:$false -erroraction silentlycontinue
- 
-            $offset = $offset + $amount
-            $employeeFound = $responseEmployee.medewerkers | Where-Object $correlationField -eq $correlationValue
-
-        } until (        
-        (($responseEmployee.medewerkers | Measure-Object).count -lt $amount) -OR ($null -ne $employeeFound)
-        )
-
-        write-verbose "found employee: $($employeeFound | convertto-json)"
-
-        if ($employeeFound) {
-            write-verbose "found employee $($employeeFound.uuid) with $correlationField = $correlationValue"
-            $previousAccount = $employeeFound
-
-            if (-NOT [string]::IsNullOrEmpty($employeeFound.afkorting)) { 
-                $account.afkorting = $employeeFound.afkorting  
-            }
-            $account.gebruikersnaam = $null
-            $account.wachtwoord = $null
-        }
-
+    
+    Write-Information "Using oAuth URI: [$($oAuthUri.Split('?')[0])]"
+    Write-Information "Retrieving oAuth token for organization: [$($organization.naam)]"
+    $splatTokenParams = @{
+        Method      = 'POST'
+        Uri         = $oAuthUri
+        Body        = "client_id=$($actionContext.Configuration.ConnectClientId)&client_secret=$($actionContext.Configuration.ConnectClientSecret)&grant_type=client_credentials"
+        ContentType = 'application/x-www-form-urlencoded'
     }
-    catch {
+    $responseToken = Invoke-RestMethod @splatTokenParams
 
-        $success = $false
-        $ex = $PSItem
+    Write-Information 'Adding authorizationToken to headers'
+    $headers = [System.Collections.Generic.Dictionary[[String], [String]]]::new()
+    $headers.Add('Authorization', "Bearer $($responseToken.access_token)")
+    $headers.Add('Content-Type', 'application/json')
+    $headers.Add('Accept', 'application/json')
 
-        if ($ex.Exception.response.statuscode -eq "404") {
-            write-verbose -verbose "Could not find employee - create employee for $($p.DisplayName)"
-        }
-        elseif ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
-            $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-            $errorObj = Resolve-HTTPError -ErrorObject $ex
+    Write-Information 'Retrieving organizations for which the token is authenticated'
+    $splatOrgParams = @{
+        Method  = 'GET'
+        Uri     = "https://api.$($actionContext.Configuration.ConnectBaseUrl)/rest/v1/connect/vestiging"
+        headers = $headers
+    }
+    $responseVestigingen = Invoke-RestMethod @splatOrgParams
 
-            $errorMessage = "Connect-API Failed: [$($p.DisplayName)]. Error: $($ex.Exception.Message) $($errorObj.ErrorMessage) "
+    Write-Information 'Retrieving UUID for the current school'
+    $curSchool = ($responseVestigingen.vestigingen.Where({ $_.naam -eq $actionContext.Data._extension_currentSchoolName }))  
+    if ($null -eq $CurSchool.uuid) {
+        throw "A department (vestiging) with name: [$( $actionContext.Data._extension_currentSchoolName )] could not be found"
+    }
+    Write-Information "Found uuid: $($CurSchool.uuid) for school $($CurSchool.naam)"
+      
+    $vestigingenList = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+    # Add currentschool and mainschool to list of vestigigen
+    if ($CurSchool.brins.count -eq 1) {
+        $brin = $CurSchool.brins | Select-Object -first 1
+    }
+    else {
+        $AfkortingBrin = $CurSchool.brins | Where-Object { $_ -eq $CurSchool.afkorting }
+        if ($AfkortingBrin.count -eq 1) {
+            $brin = $AfkortingBrin
         }
         else {
-            $errorMessage = "Connect-API Failed: [$($p.DisplayName)]. Error: $($ex.Exception.Message)"
+            Throw "Could not determine correct BRIN for $($CurSchool.naam)"
         }
+    }
+    $curVestiging = @{
+        afkorting  = $CurSchool.afkorting   
+        brinNummer = $brin
+    }
+    $vestigingenlist.add($curVestiging)   
 
-        if ($errorMessage) {
-            Throw $errorMessage  
+    Write-Information 'Verifying if a Topicus-Somtoday-HRMService account exists'
+   
+    $lastFoundEmployeeUUID = $null  
+    foreach ($vestiging in $responseVestigingen.vestigingen) {
+        if ($null -ne $actionContext.References.Account.UUID) {
+            $splatGetEmployee = @{
+                Method  = 'GET'
+                Uri     = "https://api.$($actionContext.Configuration.ConnectBaseUrl)/rest/v1/connect/vestiging/$($vestiging.uuid)/medewerker/$($actionContext.References.Account.UUID)/account"
+                Headers = $headers
+            }
+            try {
+                $FoundEmployee = (Invoke-RestMethod @splatGetEmployee).accounts  
+            }
+            catch {
+                if ($_.Exception.Response.StatusCode -eq 404) {
+                    $FoundEmployee = $null
+                } else {
+                    throw $_
+                }
+            }
         }
+        else {  
 
+            $splatGetEmployee = @{
+                BaseUri          = "https://api.$($actionContext.Configuration.ConnectBaseUrl)"
+                Headers          = $headers
+                VestigingUUID    = $vestiging.uuid
+                CorrelationField = 'externnummer'
+                CorrelationValue = $actionContext.References.Account.externMedewerkerNummer
+            }
+            
+            $FoundEmployee = Get-ConnectAPIEmployee @splatGetEmployee  
+            if ( $null -ne $FoundEmployee) { 
+                if ($null -eq $lastFoundEmployeeUUID) {
+                    $lastFoundEmployeeUUID = $FoundEmployee.uuid
+                }
+                else {
+                    if ($lastFoundEmployeeUUID -ne $FoundEmployee.uuid) {
+                        throw "Multiple accounts found with correlation value [$correlationValue]"
+                    }                   
+                }
+            }    
+        } 
+
+        if ($null -ne $FoundEmployee) {
+            $correlatedAccount = $FoundEmployee
+            if ($vestiging.naam -ne $curSchool.naam) {
+
+                if ($vestiging.brins.count -eq 1) {
+                    $brin = $vestiging.brins | Select-Object -first 1
+                }
+                else {
+                    $AfkortingBrin = $vestiging.brins | Where-Object { $_ -eq $vestiging.afkorting }
+                    if ($AfkortingBrin.count -eq 1) {
+                        $brin = $AfkortingBrin
+                    }
+                    else {
+                        Throw "Could not determine correct BRIN"
+                    }
+                }
+            }
+            $tmpVestiging = @{
+                afkorting  = $vestiging.afkorting   
+                brinNummer = $brin
+            }
+            $vestigingenList.add($tmpVestiging)           
+        }                                  
+    }  
+
+    if ($null -ne $correlatedAccount) {
+        $action = 'DeleteAccount'
+    } else {
+        $action = 'NotFound'
     }
 
-    if ($employeeFound) {
-        $action = "update"
+    # Process
+    switch ($action) {
+        'DeleteAccount' {
+             Write-Information "Account property(s) required to update: [All properties in the fields configuration for delete]"
 
-        $splatRestMethodParams = @{
-            Uri             = "https://oop.somtoday.nl/services/HRMService?wsdl"
-            Method          = 'POST'
-            ContentType     = "text/xml; charset=utf-8"
-            UseBasicParsing = $true
-        }
-        if (-not  [string]::IsNullOrEmpty($config.ProxyAddress)) {
-            $splatRestMethodParams['Proxy'] = $config.ProxyAddress
-        }
+            $account = $actionContext.Data
 
-        $SoapHeader = Get-SoapHeader -brincode $config.SomhrmBrinNr
-        $SoapBody = Get-SoapBody -account $account
+            $account | Add-Member -NotePropertyMembers @{vestigingen = $vestigingenList }
 
-        $createPersonXmlBody = @"
+            $splatRestMethodParams = @{
+                Uri             = "https://$($actionContext.Configuration.SomHrmBaseUrl)/services/HRMService?wsdl"
+                Method          = 'POST'
+                ContentType     = "text/xml; charset=utf-8"
+                UseBasicParsing = $true
+            }         
+
+            $SoapHeader = New-SoapHeader -Brincode $actionContext.Configuration.SomhrmBrinNr
+            $SoapBody = New-SoapBody -account $account
+
+            $createPersonXmlBody = @"
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
     <soapenv:Header>
       $SoapHeader
@@ -610,79 +405,39 @@ try {
     </soapenv:Body>
 </soapenv:Envelope>
 "@
+            $splatRestMethodParams['Body'] = $createPersonXmlBody
+           
+            if (-not($actionContext.DryRun -eq $true)) {
+                Write-Information "Updating Topicus-Somtoday-HRMService account with accountReference: [$($actionContext.References.Account)]"
+                $responseUpdatePerson = Invoke-RestMethod @splatRestMethodParams 
 
-        $splatRestMethodParams['Body'] = $createPersonXmlBody
+            }
+            else {
+                Write-Information "[DryRun] Update Topicus-Somtoday-HRMService account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement"
+            }
 
-        if (-Not($dryRun -eq $true)) {
-            $responseCreatePerson = Invoke-RestMethod @splatRestMethodParams -Verbose:$true
+            $outputContext.Success = $true
+            $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Message = "Update account was successful, Account property(s) updated: [$($propertiesChanged.name -join ',')]"
+                    IsError = $false
+                })
+            break
         }
-        else {
-            Write-Verbose -Verbose "will send create/update user: $SoapBody"
-        }
-        $success = $true
-        $auditLogs.Add([PSCustomObject]@{
-                Message = "$action account was successful. AccountReference is: [$($account.externMedewerkerNummer)]"
-                IsError = $false
-            })
-
-
     }
-    else {
-        $success = $true
-        $auditLogs.Add([PSCustomObject]@{
-                Message = "$action account was skipped employee not found or inactive [$($account.externMedewerkerNummer)]"
-                IsError = $false
-            })
-    }
-
-    $aRef = [PSCustomObject]@{
-        externMedewerkerNummer = $account.externMedewerkerNummer
-        UUID                   = $employeeFound.uuid
-        afkorting              = $account.afkorting
-    }
-
-
-
-}
-catch {
-    $success = $false
+} catch {
+    $outputContext.success = $false
     $ex = $PSItem
     if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
         $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
         $errorObj = Resolve-Topicus-Somtoday-HRMServiceError -ErrorObject $ex
-        $auditMessage = "Could not $action Topicus-Somtoday-HRMService account. Error: $($errorObj.FriendlyMessage)"
-        Write-Verbose "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+        $auditMessage = "Could not delete Topicus-Somtoday-HRMService account. Error: $($errorObj.FriendlyMessage)"
+        Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+    } else {
+        $auditMessage = "Could not delete Topicus-Somtoday-HRMService account. Error: $($_.Exception.Message)"
+        Write-Warning "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
     }
-    else {
-        $auditMessage = "Could not $action Topicus-Somtoday-HRMService account. Error: $($ex.Exception.Message)"
-        Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
-    }
-    $auditLogs.Add([PSCustomObject]@{
+    $outputContext.AuditLogs.Add([PSCustomObject]@{
             Message = $auditMessage
             IsError = $true
         })
-    # End
-}
-finally {
-
-    $dataStorage = @{
-        Permissions = $vestigingen
-    }
-    $result = [PSCustomObject]@{
-        Success          = $success
-        AccountReference = $aRef
-        Auditlogs        = $auditLogs
-        Account          = $account
-        PreviousAccount  = $previousAccount 
-        # Optionally return data for use in other systems
-        ExportData       = [PSCustomObject]@{
-            externMedewerkerNummer = $aRef.externMedewerkerNummer
-            UUID                   = $aRef.uuid
-            ExternalId             = $accountGuid
-            afkorting              = $account.afkorting
-        }
-
-        
-    }
-    Write-Output $result | ConvertTo-Json -Depth 10
 }

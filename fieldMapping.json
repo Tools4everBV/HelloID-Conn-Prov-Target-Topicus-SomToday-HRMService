@@ -1,0 +1,528 @@
+{
+  "Version": "v1",
+  "MappingFields": [
+    {
+      "Name": "email",
+      "Description": "email address",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Complex",
+          "Value": "\"function getValue() {\\r\\n    return Person.Accounts.MicrosoftActiveDirectory.userPrincipalName\\r\\n}\\r\\ngetValue();\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "_extension_currentSchoolName",
+      "Description": "The name of the School",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Field",
+          "Value": "\"Person.PrimaryContract.Department.DisplayName\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "achternaam",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Complex",
+          "Value": "\"// Mapping logic to generate the Surname according to the following convention.\\n// First choice\\t        B\\tvan den boele\\n// \\t                    BP\\tvan den Boele – de Vries\\n// \\t                    P\\tde Vries\\n// \\t                    PB  de Vries – van den Boele\\nfunction generateSurname() {\\n    let middleName = Person.Name.FamilyNamePrefix;\\n    let lastName = Person.Name.FamilyName;\\n    let middleNamePartner = Person.Name.FamilyNamePartnerPrefix;\\n    let lastNamePartner = Person.Name.FamilyNamePartner;\\n\\n    let convention = Person.Name.Convention;\\n\\n    let maxAttributeLength = 64;\\n\\n    let surname = '';\\n    switch (convention) {\\n        case \\\"BP\\\":\\n            if (typeof middleName !== 'undefined' && middleName) { surname = surname + middleName + ' ' }\\n            surname = surname + lastName;\\n\\n            surname = surname + ' - ';\\n\\n            if (typeof middleNamePartner !== 'undefined' && middleNamePartner) { surname = surname + middleNamePartner + ' ' }\\n            surname = surname + lastNamePartner;\\n            break;\\n        case \\\"PB\\\":\\n            if (typeof middleNamePartner !== 'undefined' && middleNamePartner) { surname = surname + middleNamePartner + ' ' }\\n            surname = surname + lastNamePartner;\\n\\n            surname = surname + ' - ';\\n            if (typeof middleName !== 'undefined' && middleName) { surname = surname + middleName + ' ' }\\n            surname = surname + lastName;\\n            break;\\n        case \\\"P\\\":\\n            if (typeof middleNamePartner !== 'undefined' && middleNamePartner) { surname = surname + middleNamePartner + ' ' }\\n            surname = surname + lastNamePartner;\\n            break;\\n        case \\\"B\\\":\\n        default:\\n            if (typeof middleName !== 'undefined' && middleName) { surname = surname + middleName + ' ' }\\n            surname = surname + lastName;\\n            break;\\n    }\\n    // Trim spaces at start and end\\n    surname = surname.trim();\\n\\n    // Shorten string to maxAttributeLength minus iteration length\\n    surname = surname.substring(0, maxAttributeLength);\\n\\n    return surname;\\n}\\n\\ngenerateSurname();\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "afkorting",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Field",
+          "Value": "\"Person.ExternalId\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "datumInDienst",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Complex",
+          "Value": "\"function generateStartdate(){\\r\\n    let dateString = \\\"\\\"\\r\\n    if (Person.PrimaryContract.StartDate){\\r\\n         dateString = ((Person.PrimaryContract.StartDate).toISOString().split('T'))[0] \\r\\n    }\\r\\n    return dateString\\r\\n}\\r\\ngenerateStartdate()\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "datumUitDienst",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Complex",
+          "Value": "\"function generateEndDate(){\\r\\n    let dateString = \\\"\\\"\\r\\n    if (Person.PrimaryContract.EndDate){\\r\\n        let dateString = (Person.PrimaryContract.EndDate.split('T'))[0];\\r\\n    }\\r\\n    return dateString;  \\r\\n}\\r\\ngenerateEndDate()\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "externMedewerkerNummer",
+      "Description": "used as identification on update",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Field",
+          "Value": "\"Person.ExternalId\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "functie",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Complex",
+          "Value": "\"function generateFunction(){\\r\\n    let resultfunction = \\\"\\\"\\r\\n    let tempfunction = Person.PrimaryContract.Custom.somtodayTitleDescription ;\\r\\n    if (tempfunction){\\r\\n        resultfunction = tempfunction.replace(\\\"&\\\", \\\"&amp;\\\");\\r\\n    }    \\r\\n    return resultfunction\\r\\n}\\r\\ngenerateFunction()\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "gebruikersnaam",
+      "Description": "Username, must be unique in entire organization",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Complex",
+          "Value": "\"function generateUsername(){\\r\\n    let username = Person.Accounts._9d0548ff314db13cfd9c1b8d3eb50949.userPrincipalName.split(\\\"@\\\")[0]   ;    \\r\\n    return username;\\r\\n}\\r\\ngenerateUsername()\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "geslacht",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Complex",
+          "Value": "\"function generateGender() {\\r\\n\\r\\n    let origGender = Person.Details.Gender\\r\\n    let gender = \\\"\\\"\\r\\n    switch (origGender){\\r\\n        case \\\"M\\\":\\r\\n        gender = \\\"MAN\\\"\\r\\n        break;\\r\\n        case \\\"V\\\":\\r\\n        gender = \\\"VROUW\\\"\\r\\n        break;\\r\\n        default:\\r\\n        gender = \\\"ONBEKEND\\\"\\r\\n    }\\r\\n    return gender\\r\\n\\r\\n}\\r\\ngenerateGender()\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "HRMAdres.buitenland1",
+      "Description": "#Foreign address, Mandatory for foreign addresses",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "None",
+          "Value": "\"\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "HRMAdres.buitenland2",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "None",
+          "Value": "\"\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "HRMAdres.buitenland3",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "None",
+          "Value": "\"\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "HRMAdres.geheimAdres",
+      "Description": "Secret address,  valid values are \"J\"= Yes or \"N\" = no",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "None",
+          "Value": "\"\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "HRMAdres.geheimTelefoonnummer",
+      "Description": "Secret phone number,  valid values are \"J\"= Yes or \"N\" = no",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "None",
+          "Value": "\"\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "HRMAdres.huisnummer",
+      "Description": "House number, Mandatory for domestic addresses, value must be present in SOMtoday-postcode list",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Complex",
+          "Value": "\"function generateHouseNumber(){\\r\\n\\r\\n    let houseNumber = Person.Contact.Personal.Address.HouseNumber + Person.Contact.Personal.Address.HouseNumberExt;\\r\\n    return houseNumber;\\r\\n}\\r\\ngenerateHouseNumber()\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "HRMAdres.landcode",
+      "Description": "Country Code, Must be a value from the SOMtoday-county list",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Fixed",
+          "Value": "\"6030\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "HRMAdres.Plaatsnaam",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "None",
+          "Value": "\"\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "HRMAdres.postcode",
+      "Description": "Postcode number, Mandatory for domestic addresses, value must be present in SOMtoday-postcode list",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Field",
+          "Value": "\"Person.Contact.Personal.Address.PostalCode\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "HRMAdres.straat",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "None",
+          "Value": "\"\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "HRMAdres.telefoonnummer",
+      "Description": "Foreign address, Mandatory for foreign addresses",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Field",
+          "Value": "\"Person.Contact.Personal.Phone.Fixed\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "InternNummer",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Fixed",
+          "Value": "\"HelloID\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "medewerkerNummer",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "None",
+          "Value": "\"\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "meisjesnaam",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "None",
+          "Value": "\"\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "redenUitDienst",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Fixed",
+          "Value": "\"Onbekend\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "roepnaam",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Field",
+          "Value": "\"Person.Name.NickName\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "voorletters",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Field",
+          "Value": "\"Person.Name.Initials\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "voorvoegsel",
+      "Description": "",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Complex",
+          "Value": "\"function generateMiddleName(){\\r\\n\\r\\n    let familyNamePrefix = Person.Name.FamilyNamePrefix ;\\r\\n    let partnerNamePrefix = Person.Name.FamilyNamePartnerPrefix;\\r\\n    let convention = Person.Name.Convention;\\r\\n    let middleName = \\\"\\\";\\r\\n\\r\\n    switch (convention) {\\r\\n        case \\\"BP\\\":\\r\\n            middleName = familyNamePrefix;\\r\\n            break;\\r\\n        case \\\"PB\\\":\\r\\n                middleName = partnerNamePrefix;   \\r\\n            break;\\r\\n        case \\\"P\\\":\\r\\n                middleName = partnerNamePrefix;        \\r\\n            break;\\r\\n        case \\\"B\\\":\\r\\n            middleName = familyNamePrefix;\\r\\n            break;\\r\\n        default:\\r\\n            middleName = familyNamePrefix;\\r\\n            break;\\r\\n    }\\r\\n    return middleName;\\r\\n}\\r\\ngenerateMiddleName()\\r\\n\\r\\n\\r\\n\\r\\n\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "wachtwoord",
+      "Description": "password",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create",
+            "Update",
+            "Delete"
+          ],
+          "MappingMode": "Complex",
+          "Value": "\"\\r\\n// generatePasswordOption1.js [https://github.com/Tools4everBV/HelloID-Lib-Prov-HelperFunctions/blob/master/Javascript/Target/Password/Scripts/generatePasswordOption1.js]\\r\\n//\\r\\n// Helper function to shuffle an array\\r\\nfunction randomizeCharSequence(passwordObject) {\\r\\n    for (let j, x, i = passwordObject.length; i; j = Math.floor(Math.random() * i), x = passwordObject[--i], passwordObject[i] = passwordObject[j], passwordObject[j] = x);\\r\\n    return passwordObject;\\r\\n}\\r\\n\\r\\nfunction generatePassword() {\\r\\n    // Initialize these variables for the algorithm to meet your password complexity rules\\r\\n    const passwordLength = 8;\\r\\n    const minUpper = 1;\\r\\n    const maxUpper = 3;\\r\\n    const minNumeric = 0;\\r\\n    const maxNumeric = 2;\\r\\n    const minSpecial = 1;\\r\\n    const maxSpecial = 1;\\r\\n\\r\\n    // Character sets\\r\\n    const upperChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';\\r\\n    const lowerChars = 'abcdefghijklmnopqrstuvwxyz';\\r\\n    const numberChars = '0123456789';\\r\\n    const specialChars = '!#$@*?';\\r\\n\\r\\n    // Do not change any code below this line !!!\\r\\n\\r\\n    // Helper function to get a random character from a set\\r\\n    const getRandomValue = (values) => values.charAt(Math.floor(Math.random() * values.length));\\r\\n\\r\\n    // Generate individual character groups\\r\\n    const numberUpper = Math.floor(Math.random() * (maxUpper - minUpper + 1)) + minUpper;\\r\\n    const numberNumeric = Math.floor(Math.random() * (maxNumeric - minNumeric + 1)) + minNumeric;\\r\\n    const numberSpecial = Math.floor(Math.random() * (maxSpecial - minSpecial + 1)) + minSpecial;\\r\\n    const numberLower = passwordLength - (numberUpper + numberNumeric + numberSpecial);\\r\\n\\r\\n    const numericGroup = Array.from({ length: numberNumeric }, () => getRandomValue(numberChars));\\r\\n    const upperGroup = Array.from({ length: numberUpper }, () => getRandomValue(upperChars));\\r\\n    const specialGroup = Array.from({ length: numberSpecial }, () => getRandomValue(specialChars));\\r\\n    const lowerGroup = Array.from({ length: numberLower }, () => getRandomValue(lowerChars));\\r\\n\\r\\n    // Combine all groups and shuffle the order\\r\\n    const password = randomizeCharSequence([...numericGroup, ...upperGroup, ...specialGroup, ...lowerGroup]);\\r\\n\\r\\n    return password.join('');\\r\\n}\\r\\n\\r\\ngeneratePassword();\\r\\n\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    }
+  ],
+  "UniqueFieldNames": []
+}

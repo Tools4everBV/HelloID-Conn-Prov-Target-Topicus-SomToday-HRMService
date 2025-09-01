@@ -1,100 +1,90 @@
 [
-    {
-      "key": "SomHrmUserName",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "HRMService - UserName",
-        "description": "The UserName to connect to Topicus Somtoday HRM-services",
-        "required": true
-      }
-    },
-    {
-      "key": "SomHrmPassword",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "HRMService - Password",
-        "required": true
-      }
-    },
-    {
-      "key": "SomHrmBaseUrl",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "HRMService - BaseUrl",
-        "description": "The URL to the Topicus Somtoday HRM-services",
-        "required": true
-      }
-    },
-    {
-      "key": "ConnectClientId",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "ConnectAPI - Client ID",
-        "description": "The client ID to connect to Topicus Connect API",
-        "required": true
-      }
-    },
-    {
-      "key": "ConnectClientSecret",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "ConnectAPI - Client Secret",
-        "required": true
-      }
-    },
-    {
-      "key": "ConnectBaseUrl",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "ConnectAPI - BaseUrl",
-        "description": "The URL to the Connect API environment",
-        "required": true
-      }
-    },
-    {
-      "key": "Connectorganization",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "ConnectAPI - organization",
-        "description": "The name of the organization in Somtoday",
-        "required": true
-      }
-    },
-    {
-      "key": "SomHrmBrinNr",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "BrinNummer",
-        "description": "The BrinNummer of the college",
-        "required": true
-      }
-    },
-    {
-      "key": "proxyAddress",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "Proxy address",
-        "placeholder": "http://localhost:8888",
-        "required": false
-      }
-    },
-    {
-      "key": "IsDebug",
-      "type": "checkbox",
-      "defaultValue": true,
-      "templateOptions": {
-        "label": "Toggle debug logging",
-        "description": "When toggled, debug logging will be displayed",
-        "required": false
-      }
+  {
+    "key": "SomHrmUserName",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "HRMService - UserName",
+      "description": "The UserName to connect to Topicus Somtoday HRM-services",
+      "required": true
     }
-  ]
+  },
+  {
+    "key": "SomHrmPassword",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "HRMService - Password",
+      "required": true
+    }
+  },
+  {
+    "key": "SomHrmBaseUrl",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "HRMService - BaseUrl",
+      "description": "The URL to the Topicus Somtoday HRM-services",
+      "required": true
+    }
+  },
+  {
+    "key": "SomHrmBrinNr",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "BrinNummer",
+      "description": "The BrinNummer of the college",
+      "required": true
+    }
+  },
+  {
+    "key": "ConnectClientId",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "ConnectAPI - Client ID",
+      "description": "The client ID to connect to Topicus Connect API",
+      "required": true
+    }
+  },
+  {
+    "key": "ConnectClientSecret",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "ConnectAPI - Client Secret",
+      "required": true
+    }
+  },
+  {
+    "key": "ConnectBaseUrl",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "ConnectAPI - BaseUrl",
+      "description": "The URL to the Connect API environment",
+      "required": true
+    }
+  },
+  {
+    "key": "ConnectOrganization",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "ConnectAPI - organization",
+      "description": "The name of the organization in Somtoday",
+      "required": true
+    }
+  },
+  {
+    "key": "UseConnectorProxy",
+    "type": "checkbox",
+    "defaultValue": "false",
+    "templateOptions": {
+      "label": "UseConnectorProxy",
+      "description": "",
+      "required": false
+    }
+  }  
+]
