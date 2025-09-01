@@ -7,6 +7,9 @@
 > [!IMPORTANT]
 > This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements.
 
+> [!WARNING]
+> The calls to the SomToday Connect API have been tested with a SomToday test environment, but the SOAP actions have not. Therefore, changes to the SOAP call may be required when implementing. 
+
 <p align="center">
   <img src="">
 </p>
@@ -123,7 +126,9 @@ Somtoday Connect API
 | /rest/v1/connect/vestiging/<VestigingUUID>/medewerker/<uuid>/account | Retrieves Account information                    |
 
 SOAP actions
+```xml
 <createPerson xmlns="http://hrm.webservices.iridium.topicus.nl/">...</CreatePerson>
+```
 
 ### API documentation
 
