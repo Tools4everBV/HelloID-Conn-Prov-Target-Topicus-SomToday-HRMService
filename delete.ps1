@@ -84,13 +84,17 @@ function Resolve-Topicus-Somtoday-HRMServiceError {
             $errorDetailsObject = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
             if ($errorDetailsObject.errors) {
                 $httpErrorObj.FriendlyMessage = $errorDetailsObject.errors -join ', '
-            } elseif ($errorDetailsObject.message) {
+            }
+            elseif ($errorDetailsObject.message) {
                 $httpErrorObj.FriendlyMessage = $errorDetailsObject.message
-            } elseif ($errorDetailsObject.error_description) {
+            }
+            elseif ($errorDetailsObject.error_description) {
                 $httpErrorObj.FriendlyMessage = $errorDetailsObject.error_description
-            } else {
+            }
+            else {
                 $httpErrorObj.FriendlyMessage = $errorDetailsObject
-            }        }
+            }        
+        }
         catch {
             $httpErrorObj.FriendlyMessage = "Error: [$($httpErrorObj.ErrorDetails)] [$($_.Exception.Message)]"
         }
@@ -227,7 +231,7 @@ try {
     }
 
     Write-Information 'Verifying if a Topicus-Somtoday-HRMService account exists'
-     Write-information "Retrieving Somtoday organizationUUID's"
+    Write-information "Retrieving Somtoday organizationUUID's"
 
     $splatRestParams = @{
         Method = 'GET'
@@ -317,7 +321,8 @@ try {
             catch {
                 if ($_.Exception.Response.StatusCode -eq 404) {
                     $FoundEmployee = $null
-                } else {
+                }
+                else {
                     throw $_
                 }
             }
@@ -372,14 +377,15 @@ try {
 
     if ($null -ne $correlatedAccount) {
         $action = 'DeleteAccount'
-    } else {
+    }
+    else {
         $action = 'NotFound'
     }
 
     # Process
     switch ($action) {
         'DeleteAccount' {
-             Write-Information "Account property(s) required to update: [All properties in the fields configuration for delete]"
+            Write-Information "Account property(s) required to update: [All properties in the fields configuration for delete]"
 
             $account = $actionContext.Data
 
@@ -423,8 +429,19 @@ try {
                 })
             break
         }
+     
+        'NotFound' {
+            Write-Information "Topicus-Somtoday-HRMService account: [$($actionContext.References.Account)] could not be found, indicating that it may have been deleted"
+            $outputContext.Success = $true
+            $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Message = "Topicus-Somtoday-HRMService account: [$($actionContext.References.Account)] could not be found, indicating that it may have been deleted"
+                    IsError = $true
+                })
+            break
+        }
     }
-} catch {
+}
+catch {
     $outputContext.success = $false
     $ex = $PSItem
     if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
@@ -432,7 +449,8 @@ try {
         $errorObj = Resolve-Topicus-Somtoday-HRMServiceError -ErrorObject $ex
         $auditMessage = "Could not delete Topicus-Somtoday-HRMService account. Error: $($errorObj.FriendlyMessage)"
         Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
-    } else {
+    }
+    else {
         $auditMessage = "Could not delete Topicus-Somtoday-HRMService account. Error: $($_.Exception.Message)"
         Write-Warning "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
     }
