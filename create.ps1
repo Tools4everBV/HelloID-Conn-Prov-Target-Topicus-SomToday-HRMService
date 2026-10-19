@@ -320,15 +320,15 @@ try {
         } 
     }
     if ($correlatedEmployee.Count -eq 0) {
-        $action = 'CreateHRMAccount'
+        $action = 'CreateAccount'
     }
     else {
-        $action = 'CorrelateHRMAccount'
+        $action = 'CorrelateAccount'
     } 
 
     # Process
     switch ($action) {
-        'CreateHRMAccount' {
+        'CreateAccount' {
 
             $account = $actionContext.Data
 
@@ -396,7 +396,7 @@ try {
             break
         }
 
-        'CorrelateHRMAccount' {
+        'CorrelateAccount' {
             Write-Information 'Correlating Topicus-Somtoday-HRMService account'
 
             # Make sure to filter out arrays from $outputContext.Data (If this is not mapped to type Array in the fieldmapping). This is not supported by HelloID.            
