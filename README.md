@@ -1,32 +1,32 @@
-# HelloID-Conn-Prov-Target-Topicus-Somtoday-HRMService
-
-<!--
-** for extra information about alert syntax please refer to [Alerts](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts)
--->
+# HelloID-Conn-Prov-Target-Topicus-SomToday-HRMService
 
 > [!IMPORTANT]
-> This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements.
+> This repository contains the connector and configuration code only. The implementer is responsible for acquiring connection details such as usernames, passwords and certificates. A contract or agreement with the supplier may also be required. Contact the client's application manager to coordinate the requirements.
 
 > [!WARNING]
-> The calls to the SomToday Connect API have been tested with a SomToday test environment, but the SOAP actions have not. Therefore, changes to the SOAP call may be required when implementing. 
+> The Somtoday Connect API calls have been tested with a Somtoday test environment, but the SOAP actions have not. Changes to the SOAP calls may be required during implementation.
 
 <p align="center">
-  <img src="">
+    <img src="https://raw.githubusercontent.com/Tools4everBV/HelloID-Conn-Prov-Target-Topicus-SomToday-HRMService/refs/heads/main/Logo.png" alt="Topicus Somtoday HRMService">
 </p>
 
 ## Table of contents
 
-- [HelloID-Conn-Prov-Target-Topicus-Somtoday-HRMService](#helloid-conn-prov-target-Topicus-Somtoday-HRMService)
+- [HelloID-Conn-Prov-Target-Topicus-SomToday-HRMService](#helloid-conn-prov-target-topicus-somtoday-hrmservice)
   - [Table of contents](#table-of-contents)
   - [Introduction](#introduction)
-  - [Supported  features](#supported--features)
+  - [Supported features](#supported-features)
   - [Getting started](#getting-started)
-    - [Prerequisites](#prerequisites)
+    - [HelloID Icon URL](#helloid-icon-url)
+    - [Requirements](#requirements)
     - [Connection settings](#connection-settings)
     - [Correlation configuration](#correlation-configuration)
     - [Field mapping](#field-mapping)
     - [Account Reference](#account-reference)
   - [Remarks](#remarks)
+    - [SOAP API behavior](#soap-api-behavior)
+    - [Update behavior](#update-behavior)
+    - [Create response](#create-response)
   - [Development resources](#development-resources)
     - [API endpoints](#api-endpoints)
     - [API documentation](#api-documentation)
@@ -35,115 +35,122 @@
 
 ## Introduction
 
-_HelloID-Conn-Prov-Target-Topicus-Somtoday-HRMService_ is a _target_ connector. _Topicus-Somtoday-HRMService_ utilizes a combined set of Rest and SOAP interfaces that allow you to Read employee account data from Somtoday by means of the Connect API (Rest), and create/update  associated or new HRM employee data (SOAP)
+_HelloID-Conn-Prov-Target-Topicus-SomToday-HRMService_ is a target connector for Topicus Somtoday. It uses the Somtoday Connect REST API to import and correlate employee accounts, and the HRMService SOAP API to create or update employee data.
 
-## Supported  features
+## Supported features
 
 The following features are available:
 
-| Feature                                   | Supported | Actions                                 | Remarks           |
-| ----------------------------------------- | --------- | --------------------------------------- | ----------------- |
-| **Account Lifecycle**                     | ✅        | Create, Update, Delete                  | Update (when triggered) unconditionally updates all configured fields |
-| **Permissions**                           | ❌        |                                         |                   |
-| **Resources**                             | ❌        | -                                       |                   |
-| **Entitlement Import: Accounts**          | ✅        | import.ps1                              |                   |
-| **Entitlement Import: Permissions**       | ❌        | -                                       |                   |
-| **Governance Reconciliation Resolutions** | ❌        | -                                       |                   |
+| Feature                                   | Supported | Actions                | Remarks                                      |
+| ----------------------------------------- | --------- | ---------------------- | -------------------------------------------- |
+| **Account Lifecycle**                     | ✅         | Create, Update, Delete | Update unconditionally updates configured fields |
+| **Permissions**                           | ❌         | -                      |                                              |
+| **Resources**                             | ❌         | -                      |                                              |
+| **Entitlement Import: Accounts**          | ✅         | -                      | Implemented in `import.ps1`                  |
+| **Entitlement Import: Permissions**       | ❌         | -                      |                                              |
+| **Governance Reconciliation Resolutions** | ❌         | -                      |                                              |
 
 ## Getting started
 
-### Prerequisites
-No specific prerequisites, but you may need to tweak the correlation configuration fields depending on availability in your source systems.
+### HelloID Icon URL
+
+Use this URL for the icon of the HelloID Provisioning target system:
+
+```text
+https://raw.githubusercontent.com/Tools4everBV/HelloID-Conn-Prov-Target-Topicus-SomToday-HRMService/refs/heads/main/Icon.png
+```
+
+### Requirements
+
+- Access to both the Somtoday HRMService SOAP API and the Somtoday Connect REST API.
+- Valid credentials for both services. The Connect API may require Topicus credentials or Tools4ever Connector Proxy credentials, depending on the selected connection method.
+- Confirm with the client's application manager whether a supplier contract, allowlisting or other access prerequisites are required.
+- Review and adapt the correlation fields to match the implementation in the source system.
 
 ### Connection settings
 
-The following settings are required to connect to the API.
+The following settings are required to connect to the APIs:
 
-| Setting      | Description                                     | Mandatory   |
-| ------------ | -----------                                     | ----------- |
-| SomHrmUserName     | The UserName to connect to the HRMservice     | Yes         |
-| SomHrmPassword     | The Password to connect to the HRMservice       | Yes         |
-| SomHrmBaseUrl      | The URL to the HRMservice Like: https://portalnaam-oop.Somtoday.nl/services/HRMService?wsdl'               | Yes         |
-| ConnectClientId      | The client ID to connect to Topicus Connect API               | Yes         |
-| ConnectClientSecret | ConnectAPI - Client Secret | Yes |
-| ConnectBaseUrl |The URL to the Connect API environment | Yes |
-| ConnectOrganization | The name of the organization in Somtoday | Yes         |
-| BrinNummer   | The BrinNummer of the school associated whit the HRM service | Yes |
-| USECONECTORPROXY | whether or not to use the specific Tools4ever Connector proxy for access to the Connect API | Yes |
+| Setting             | Description                                                                              | Mandatory |
+| ------------------- | ---------------------------------------------------------------------------------------- | --------- |
+| SomHrmUserName      | Username for the Somtoday HRMService                                                     | Yes       |
+| SomHrmPassword      | Password for the Somtoday HRMService                                                     | Yes       |
+| SomHrmBaseUrl       | HRMService host name, without `https://` or the service path                             | Yes       |
+| SomHrmBrinNr        | BRIN number of the school associated with the HRMService                                 | Yes       |
+| ConnectClientId     | Client ID for the Somtoday Connect API                                                   | Yes       |
+| ConnectClientSecret | Client secret for the Somtoday Connect API                                               | Yes       |
+| ConnectBaseUrl      | Connect API environment host name, without `https://`                                    | Yes       |
+| ConnectOrganization | Name of the organization in Somtoday                                                    | Yes       |
+| UseConnectorProxy   | Whether to use the Tools4ever Connector Proxy for the Connect API (defaults to `false`) | No        |
 
+For example, enter `acceptatie.somtoday.nl` for `ConnectBaseUrl`. `SomHrmBaseUrl` should contain the HRM host name, for example `portalnaam-oop.somtoday.nl`; the connector adds the protocol and service path.
 
-
-- The ConnectBaseUrl should be without "https://" ,  so for example "acceptatie.somtoday.nl"
-- The USECONECTORPROXY specifies if you connect to the SomToday Connect API directly(with credentials provided by Topicus), or by means of our Connector proxy (with credentials  provided by Tools4ever). Usually it is required to use the Connector Proxy for production environments.
-- The USECONECTORPROXY setting only applies to the Connect Rest API. The HRM SOAP connection does not use the connector proxy.
- 
+`UseConnectorProxy` applies only to the Connect REST API. The HRMService SOAP connection does not use the Connector Proxy. Production use of the proxy may be required; confirm the required connection method and credentials with the application manager.
 
 ### Correlation configuration
 
-The correlation configuration is used to specify which properties will be used to match an existing account within _Topicus-Somtoday-HRMService_ to a person in _HelloID_.
+The correlation configuration specifies which properties are used to match an existing account in _Topicus Somtoday HRMService_ to a person in _HelloID_.
 
-| Setting                   | Value                             |
-| ------------------------- | --------------------------------- |
-| Enable correlation        | `True`                            |
+| Setting                   | Value                                             |
+| ------------------------- | ------------------------------------------------- |
+| Enable correlation        | `True`                                            |
 | Person correlation field  | `PersonContext.Person.Custom.MedewerkerAfkorting` |
-| Account correlation field | `afkorting`                       |
+| Account correlation field | `afkorting`                                       |
 
-Note, which fields should be used for the correlation are highly dependent on your Somtoday implementation, so it is likely that you need to change this configuration to fit your environment.
+The appropriate correlation fields depend on the Somtoday implementation and may need to be changed.
 
 > [!TIP]
-> _For more information on correlation, please refer to our correlation [documentation](https://docs.helloid.com/en/provisioning/target-systems/powershell-v2-target-systems/correlation.html) pages_.
+> For more information on correlation, see the HelloID [correlation documentation](https://docs.helloid.com/en/provisioning/target-systems/powershell-v2-target-systems/correlation.html).
 
 ### Field mapping
 
-The field mapping can be imported by using the _fieldMapping.json_ file.
+Import the field mapping by using the [fieldMapping.json](fieldMapping.json) file.
 
 ### Account Reference
 
-The account reference <Accountreference>.uuid property is populated with the property `uuid`  from the correlated employee account from the "Connect" API.
-When creating a new account this property is not yet available, instead the property <Accountreference>.externMedewerkerNummer is specified as temporary alternative reference. The update script will lookup the account by uuid if available, if not by 'externnummer' =   <Accountreference>.externMedewerkerNummer, and fill de reference with the found uuid.
+The account reference's `uuid` property is populated from the `uuid` property of the correlated employee account in the Connect API. A newly created account does not yet have this UUID, so `externMedewerkerNummer` is used as a temporary reference. The update script looks up the account by UUID when available, or otherwise by `externnummer`, and then fills in the UUID reference.
 
 ## Remarks
-- The HRMService support only one SOAP call in total, to create and or update a employee record.
-  In order to allow correlation with SomToDay employee accounts, the SomToday Connect API is used, therfore credentials are needed for both connections.
 
-- In principle it is necessary, when updating users, to specify all attributes of the user, not only the attributes that have been changed.
-  As not all HRM attributes can in a simple way be retrieved by the Connect API calls, the current implementation updates the HRM data unconditionally, when the update script is triggerd.
+### SOAP API behavior
 
-- The HRMService call does not return the created account, so on create the outputContext.data is a copy of the ActionContext.data
+The HRMService exposes a single SOAP operation, `createPerson`, for creating or updating an employee record. The Connect API is also required to correlate employee accounts, so credentials for both services are needed. The SOAP actions have not been tested against a Somtoday environment and may need adjustment.
+
+### Update behavior
+
+When updating an employee, the HRMService generally requires all employee attributes, not only changed values. Since the Connect API does not expose all HRM attributes in a form that can be retrieved by this connector, the update script unconditionally sends all configured fields when triggered.
+
+### Create response
+
+The HRMService call does not return the created account. On create, `outputContext.data` is therefore a copy of `ActionContext.data`.
 
 ## Development resources
-  See the "HRM webservice.pdf" for information regarding specific attributes
+
+See [HRM Webservice.pdf](HRM%20Webservice.pdf) for information about specific HRM attributes.
 
 ### API endpoints
 
-Somtoday Connect API
+The following endpoints are used by the connector:
 
-| Endpoint                                                             | Description                                                  |
-| -------------------------------------------------------------------- | ------------------------------------------------------------ |
-| <TokenURL>/oauth2/token?organisation=<organisationId>                | Retrieves the oAuth token                                    |
-| /rest/v1/connect/vestiging                                           | Retrieves organizations for which the token is authenticated |
-| /rest/v1/connect/vestiging/<VestigingUUID>/medewerker                | Retrieves all employees for a specific department            |
-| /rest/v1/connect/vestiging/<VestigingUUID>/medewerker/<uuid>/account | Retrieves Account information                    |
-
-SOAP actions
-```xml
-<createPerson xmlns="http://hrm.webservices.iridium.topicus.nl/">...</CreatePerson>
-```
+| Endpoint                                                               | HTTP method | Description                                                           |
+| ---------------------------------------------------------------------- | ----------- | --------------------------------------------------------------------- |
+| `https://inloggen.{ConnectBaseUrl}/oauth2/token?organisation={uuid}`   | POST        | Retrieves an OAuth token; the Connector Proxy can be used instead    |
+| `/rest/v1/connect/instelling`                                          | GET         | Retrieves Somtoday organizations                                      |
+| `/rest/v1/connect/vestiging`                                           | GET         | Retrieves locations available to the authenticated token             |
+| `/rest/v1/connect/vestiging/{VestigingUUID}/medewerker`                | GET         | Retrieves employees for a location                                    |
+| `/rest/v1/connect/vestiging/{VestigingUUID}/medewerker/{uuid}/account` | GET         | Retrieves employee account information                                |
+| `https://{SomHrmBaseUrl}/services/HRMService?wsdl`                      | POST (SOAP) | Calls the `createPerson` operation to create or update an employee   |
 
 ### API documentation
 
-[Swagger Documentation](https://editor.swagger.io/?url=https://api.somtoday.nl/rest/v1/connect/documented/openapi)
-
-See the "HRM webservice.pdf" for information regarding specific attributes
+- [Somtoday Connect API Swagger documentation](https://editor.swagger.io/?url=https://api.somtoday.nl/rest/v1/connect/documented/openapi)
+- See [HRM Webservice.pdf](HRM%20Webservice.pdf) for the HRMService SOAP attributes.
 
 ## Getting help
 
 > [!TIP]
-> _For more information on how to configure a HelloID PowerShell connector, please refer to our [documentation](https://docs.helloid.com/en/provisioning/target-systems/powershell-v2-target-systems.html) pages_.
-
-> [!TIP]
->  _If you need help, feel free to ask questions on our [forum](https://forum.helloid.com)_.
+> For more information on configuring a HelloID PowerShell connector, see the [HelloID PowerShell target system documentation](https://docs.helloid.com/en/provisioning/target-systems/powershell-v2-target-systems.html).
 
 ## HelloID docs
 
-The official HelloID documentation can be found at: https://docs.helloid.com/
+The official HelloID documentation is available at [docs.helloid.com](https://docs.helloid.com/).

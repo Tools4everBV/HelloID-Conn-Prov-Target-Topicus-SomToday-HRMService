@@ -71,7 +71,7 @@ try {
         throw "An organization (instelling) with name: [$($actionContext.Configuration.Instelling)] could not be found"
     }
 
-    Write-information "Found uuid $($organization.uuid) for organisation $($config.Connectorganization)"
+    Write-information "Found uuid $($organization.uuid) for organisation $($actionContext.Configuration.Connectorganization)"
 
     Write-Information 'Determine oAuth URI'
     $oAuthUri = "https://inloggen.$($actionContext.Configuration.ConnectBaseUrl)/oauth2/token?organisation=$($organization.uuid)"
@@ -104,7 +104,6 @@ try {
     }
     $responseVestigingen = Invoke-RestMethod @splatOrgParams
 
-    $importedAccounts = @{}
     foreach ($vestiging in $responseVestigingen.vestigingen) {
         $amount = 50
         $offset = 0
@@ -116,8 +115,44 @@ try {
                 UseBasicParsing = $true
             }
             $responseEmployee = Invoke-RestMethod @splatRestParams -Verbose:$false -ErrorAction silentlycontinue
-            foreach ($employee in $responseEmployee.medewerkers) {
-                $importedAccounts[$employee.uuid] = $employee
+
+            foreach ($account in $responseEmployee.medewerkers) {
+                # Making sure only fieldMapping fields are imported
+                $data = @{}
+                foreach ($field in $actionContext.ImportFields) {
+                    switch ($field) {
+                        'externMedewerkerNummer' {
+                            $data["$field"] = $account.externnummer
+                            break
+                        }
+                        default {
+                            $data["$field"] = $account.$field
+                        }
+                    }
+                }         
+
+                # Make sure the displayName has a value
+                $displayName = "$($account.roepnaam) $($account.achternaam)".trim()
+                if ([string]::IsNullOrWhiteSpace($displayName)) {
+                    $displayName = $account.uuid
+                }       
+
+                # Make sure the userName has a value
+                if ([string]::IsNullOrWhiteSpace($account.UserName)) {
+                    $userName = $account.uuid
+                }
+                else {
+                    $userName = $account.UserName
+                }
+
+                # Return the result
+                Write-Output @{
+                    AccountReference = $account.uuid
+                    displayName      = $displayName
+                    UserName         = $userName
+                    Enabled          = $false
+                    Data             = $data
+                }
             } 
             $offset = $offset + $amount         
 
@@ -126,46 +161,6 @@ try {
         )
 
     }   
-
-    foreach ($accountUUID in $importedAccounts.keys) {
-        # Making sure only fieldMapping fields are imported
-        $data = @{}
-        $account = $importedAccounts[$accountUUID]
-        foreach ($field in $actionContext.ImportFields) {
-            switch ($field) {
-                'externMedewerkerNummer' {
-                    $data["$field"] = $account.externnummer
-                    break
-                }
-                default {
-                    $data["$field"] = $account.$field
-                }
-            }
-        }         
-
-        # Make sure the displayName has a value
-        $displayName = "$($account.roepnaam) $($account.achternaam)".trim()
-        if ([string]::IsNullOrWhiteSpace($displayName)) {
-            $displayName = $account.uuid
-        }       
-
-        # Make sure the userName has a value
-        if ([string]::IsNullOrWhiteSpace($account.UserName)) {
-            $UserName = $Account.uuid
-        }
-        else {
-            $UserName = $account.UserName
-        }
-
-        # Return the result
-        Write-Output @{
-            AccountReference = $account.uuid
-            displayName      = $displayName
-            UserName         = $UserName
-            Enabled          = $false
-            Data             = $data
-        }
-    }
     Write-Information 'Topicus-Somtoday-HRMService account entitlement import completed'
 }
 catch {
